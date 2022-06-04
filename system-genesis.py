@@ -14,11 +14,18 @@
 
 import authorization_client
 
+genesisKeyID = 'CD9A3ED2-9190-4B27-86CC-9EC8F5341692'
+genesisKeySecret = 'GENESIS-AC0F0164-E970-4BE5-8387-8761F23EB4FF'
+
 def systemGenesis():
   configuration = authorization_client.Configuration('http://localhost:31202')
   apiClient = authorization_client.ApiClient(configuration)
   tokenAPI = authorization_client.TokenApi(apiClient)
-  print(tokenAPI.get_jwks())
+  jwks = tokenAPI.get_jwks()
+  print('Public Keys: ' + str(len(jwks.keys)))
+
+  for key in jwks.keys:
+      print(key.kid + ' ' + key.kty+ ' ' + key.alg)
 
 if __name__ == '__main__':
   systemGenesis()
