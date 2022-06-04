@@ -1,0 +1,102 @@
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+plugins {
+  id 'org.openapi.generator' version '4.2.3'
+}
+
+def s84Version = '0.5.1-SNAPSHOT'
+
+repositories {
+  if (s84Version.endsWith('SNAPSHOT')) {
+    mavenLocal()
+    maven { url 'https://s01.oss.sonatype.org/content/repositories/snapshots/' }
+  }
+
+  jcenter()
+  mavenCentral()
+  maven { url 'https://plugins.gradle.org/m2/' }
+}
+
+configurations {
+  pythonClient
+}
+
+dependencies {
+  pythonClient 'io.service84.openapi:apikey-service:0.5.0'
+  pythonClient 'io.service84.openapi:permission-service:0.5.0'
+  pythonClient 'io.service84.openapi:impersonation-service:0.5.0'
+  pythonClient 'io.service84.openapi:authorization-service:0.5.0'
+}
+
+////////////////////////////////
+//Download Dependencies/////////
+////////////////////////////////
+task downloadDependencies {
+  doLast {
+    project.rootProject.allprojects.each { project ->
+      project.buildscript.configurations.each { configuration ->
+        if (configuration.canBeResolved) {
+          configuration.resolve()
+        }
+      }
+
+      project.configurations.each { configuration ->
+        if (configuration.canBeResolved) {
+          configuration.resolve()
+        }
+      }
+    }
+  }
+}
+
+////////////////////////////////
+//Process Service Dependencies//
+////////////////////////////////
+task processServices {}
+task processService {
+  configurations.pythonClient.each {
+    def serviceJAR = "${it}"
+    def serviceName = org.apache.commons.io.FilenameUtils.getBaseName(serviceJAR).split('-')[0]
+
+    tasks.create(name: "delete_api_definition_${serviceName}", type: Delete) {
+      delete "service_definitions/${serviceName}.yaml"
+    }
+
+    tasks.create(
+        name: "copy_api_definition_${serviceName}",
+        dependsOn: [ "delete_api_definition_${serviceName}"],
+        type: Copy
+    ) {
+      from(zipTree(serviceJAR).matching { include "${serviceName}.yaml" })
+      into('service_definitions')
+    }
+
+    tasks.create(name: "delete_api_client_${serviceName}", type: Delete) {
+      delete "${serviceName}_client"
+    }
+
+    tasks.create(
+        name: "generate_api_client_${serviceName}",
+        dependsOn: [ "delete_api_client_${serviceName}", "copy_api_definition_${serviceName}"],
+        type: org.openapitools.generator.gradle.plugin.tasks.GenerateTask
+    ) {
+      inputSpec = "${rootDir}/service_definitions/${serviceName}.yaml"
+      outputDir = "${rootDir}"
+      generatorName = 'python'
+      library = 'urllib3'
+      packageName = "${serviceName}_client"
+    }
+
+    processServices.dependsOn "generate_api_client_${serviceName}"
+  }
+}
