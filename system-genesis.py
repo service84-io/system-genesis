@@ -14,8 +14,20 @@
 
 import authorization_client
 
-genesisKeyID = 'CD9A3ED2-9190-4B27-86CC-9EC8F5341692'
-genesisKeySecret = 'GENESIS-AC0F0164-E970-4BE5-8387-8761F23EB4FF'
+import base64
+
+def getGenesisToken(tokenAPI, durationSeconds = 60 * 60):
+  genesisKeyID = 'CD9A3ED2-9190-4B27-86CC-9EC8F5341692'
+  genesisKeySecret = 'GENESIS-AC0F0164-E970-4BE5-8387-8761F23EB4FF'
+  authentication = 'Basic ' + base64.b64encode(str.encode(genesisKeyID + ':' + genesisKeySecret)).decode("utf-8")
+  scopes = [
+    'permission:create_any_scope',
+    'permission:get_any_scope',
+    'permission:grant_any_subject_scope'
+  ]
+  tokenRequest = authorization_client.TokenRequest(durationSeconds, scopes)
+  token = tokenAPI.request_token(tokenRequest, authentication=authentication)
+  return token
 
 def systemGenesis():
   configuration = authorization_client.Configuration('http://localhost:31202')
@@ -26,6 +38,9 @@ def systemGenesis():
 
   for key in jwks.keys:
       print(key.kid + ' ' + key.kty+ ' ' + key.alg)
+
+  token = getGenesisToken(tokenAPI)
+  print(token)
 
 if __name__ == '__main__':
   systemGenesis()
