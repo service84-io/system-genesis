@@ -11,6 +11,7 @@
 // limitations under the License.
 
 plugins {
+  id 'io.service84.downloaddependencies' version '0.5.0'
   id 'org.openapi.generator' version '4.2.3'
 }
 
@@ -36,27 +37,6 @@ dependencies {
   pythonClient 'io.service84.openapi:permission-service:0.5.0'
   pythonClient 'io.service84.openapi:impersonation-service:0.5.0'
   pythonClient 'io.service84.openapi:authorization-service:0.5.0'
-}
-
-////////////////////////////////
-//Download Dependencies/////////
-////////////////////////////////
-task downloadDependencies {
-  doLast {
-    project.rootProject.allprojects.each { project ->
-      project.buildscript.configurations.each { configuration ->
-        if (configuration.canBeResolved) {
-          configuration.resolve()
-        }
-      }
-
-      project.configurations.each { configuration ->
-        if (configuration.canBeResolved) {
-          configuration.resolve()
-        }
-      }
-    }
-  }
 }
 
 ////////////////////////////////
